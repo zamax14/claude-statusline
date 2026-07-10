@@ -53,6 +53,16 @@ cp settings.json ~/.claude/settings.json
 bash ~/.claude/fetch-usage.sh
 ```
 
+### Uninstall
+
+Removes the scripts, themes, skills and state, and strips the `statusLine` + `fetch-usage` hooks from `settings.json` (leaving any other settings untouched, requires `jq`):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/JoseVelazcoH/claude-statusline/main/uninstall.sh | sh
+```
+
+Or run `sh uninstall.sh` from a cloned repo. Restart Claude Code afterwards.
+
 ## Themes
 
 Four Catppuccin flavors are included: `mocha` (default), `macchiato`, `frappe`, and `latte`. Switch with:
