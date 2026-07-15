@@ -39,7 +39,8 @@ segment_enabled() {
 
 # read_layout -> current layout string from ~/.claude/.statusline-config, or the default
 read_layout() {
-  local val=$(cat "$HOME/.claude/.statusline-config" 2>/dev/null)
+  local claude_dir=${CLAUDE_HOME:-$HOME/.claude}
+  local val=$(cat "$claude_dir/.statusline-config" 2>/dev/null)
   printf '%s' "${val:-$DEFAULT_LAYOUT}"
 }
 

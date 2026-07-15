@@ -25,8 +25,9 @@ read_creds() {
     return
   fi
   # Linux: stored on disk
-  if [ -f "$HOME/.claude/.credentials.json" ]; then
-    cat "$HOME/.claude/.credentials.json" 2>/dev/null
+  claude_dir=${CLAUDE_HOME:-$HOME/.claude}
+  if [ -f "$claude_dir/.credentials.json" ]; then
+    cat "$claude_dir/.credentials.json" 2>/dev/null
   fi
 }
 
