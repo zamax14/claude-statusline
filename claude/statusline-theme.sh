@@ -3,7 +3,7 @@
 # ~/.claude/.statusline-theme. The statusline picks it up on the next render.
 set -e
 
-CLAUDE_DIR="$HOME/.claude"
+CLAUDE_DIR="${CLAUDE_HOME:-$HOME/.claude}"
 THEMES_DIR="$CLAUDE_DIR/themes"
 STATE="$CLAUDE_DIR/.statusline-theme"
 

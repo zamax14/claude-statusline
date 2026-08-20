@@ -3,9 +3,10 @@
 # ~/.claude/.statusline-config. The statusline picks it up on the next render.
 set -e
 
-CLAUDE_DIR="$HOME/.claude"
+CLAUDE_DIR="${CLAUDE_HOME:-$HOME/.claude}"
 STATE="$CLAUDE_DIR/.statusline-config"
 STYLE_STATE="$CLAUDE_DIR/.statusline-limit-style"
+TTY="${STATUSLINE_TTY:-/dev/tty}"
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd 2>/dev/null)
 . "${SCRIPT_DIR:-$CLAUDE_DIR}/lib.sh"
@@ -38,7 +39,8 @@ print_status() {
   echo
   echo "session/week style: $(read_limit_style)  (full | compact)"
   echo
-  echo "usage: statusline-config.sh enable|disable <segment>"
+  echo "usage: statusline-config.sh menu"
+  echo "       statusline-config.sh enable|disable <segment>"
   echo "       statusline-config.sh order '<line1,segs>;<line2,segs>;...'"
   echo "       (';' separates lines, ',' separates segments on the same line,"
   echo "        '|' once per line right-aligns everything after it to the terminal edge"
@@ -48,9 +50,48 @@ print_status() {
   echo "         compact = reset time only (reset ↻ 3h 54m)"
 }
 
-case "$1" in
-  "")
+interactive_menu() {
+  [ -r "$TTY" ] || { echo "error: interactive input unavailable" >&2; exit 1; }
+  exec 3< "$TTY"
+  while :; do
+    echo
+    "$0" show
+    echo "Type a segment name to toggle it, or: order, theme, q"
+    printf "Choice: "
+    IFS= read -r choice <&3 || break
+    case "$choice" in
+      q|quit|exit) break ;;
+      order)
+        printf "Layout: "
+        IFS= read -r value <&3
+        "$0" order "$value"
+        ;;
+      theme)
+        "$SCRIPT_DIR/statusline-theme.sh"
+        printf "Theme: "
+        IFS= read -r value <&3
+        "$SCRIPT_DIR/statusline-theme.sh" "$value"
+        ;;
+      *)
+        if ! segment_enabled "$choice" "$ALL_SEGMENTS"; then
+          echo "error: unknown choice '$choice'" >&2
+        elif segment_enabled "$choice" "$(flatten_layout "$(read_layout)")"; then
+          "$0" disable "$choice"
+        else
+          "$0" enable "$choice"
+        fi
+        ;;
+    esac
+  done
+  exec 3<&-
+}
+
+case "${1:-}" in
+  ""|show)
     print_status
+    ;;
+  menu)
+    interactive_menu
     ;;
   enable)
     seg=$2

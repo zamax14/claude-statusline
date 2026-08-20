@@ -1,7 +1,7 @@
 ---
 name: statusline-config
-description: Toggle, reorder, or right-align claude-statusline segments (model, dir, branch, ctx, session, week, changes)
-argument-hint: "[enable|disable|order] [segment-or-layout]"
+description: Show, interactively configure, toggle, reorder, or right-align Claude status-line segments
+argument-hint: "[show|menu|enable|disable|order] [segment-or-layout]"
 allowed-tools: Bash(~/.claude/statusline-config.sh *)
 disable-model-invocation: true
 ---

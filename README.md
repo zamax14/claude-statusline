@@ -1,91 +1,118 @@
-# Claude-statusline
+# AI statusline
+
+Status-line tools for **Claude Code** and **Codex CLI**, kept separate because each client exposes a different extension model.
 
 ![statusline](assets/statusline.svg)
 
-A minimal, portable (Linux/macOS) Claude Code statusline showing model, folder, git branch, context window, and usage-limit bars. Themed with Catppuccin, configurable segments.
+| Client | Implementation | Configuration |
+| --- | --- | --- |
+| Claude Code | Custom shell renderer fed by Claude's `statusLine.command` JSON | `~/.claude/statusline-config.sh` |
+| Codex CLI | Codex's native TUI footer | `tui.status_line` in `~/.codex/config.toml` |
 
-## Install
+## Repository layout
 
-Requires `curl` and `jq`. Downloads the scripts and merges the `settings.json` blocks:
+```text
+claude/     renderer, usage fetcher, themes and Claude skills
+codex/      native Codex status-line configurator and skill
+install.sh  global interactive installer and uninstaller
+test.sh     isolated provider smoke test
+```
+
+## Global installer
+
+Run the menu directly from GitHub:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/JoseVelazcoH/claude-statusline/main/install.sh | sh
 ```
 
-Restart Claude Code to see it.
+It asks whether to install or uninstall, then whether to act on Claude Code, Codex, or both.
 
-<details>
-<summary>Manual install</summary>
-
-```sh
-git clone https://github.com/JoseVelazcoH/claude-statusline.git
-cd claude-statusline
-
-# scripts
-cp fetch-usage.sh statusline-command.sh statusline-config.sh lib.sh ~/.claude/
-chmod +x ~/.claude/fetch-usage.sh ~/.claude/statusline-command.sh ~/.claude/statusline-config.sh
-
-# skills
-mkdir -p ~/.claude/skills/statusline-theme ~/.claude/skills/statusline-config
-cp skills/statusline-theme/SKILL.md ~/.claude/skills/statusline-theme/SKILL.md
-cp skills/statusline-config/SKILL.md ~/.claude/skills/statusline-config/SKILL.md
-
-# settings: merge the statusLine and hooks blocks into your ~/.claude/settings.json,
-# or copy it directly if you don't have one
-cp settings.json ~/.claude/settings.json
-
-bash ~/.claude/fetch-usage.sh   # optional: trigger an initial usage fetch
-```
-
-</details>
-
-## Usage
-
-All changes apply on the next render, no restart needed. Every command also works inside Claude Code as a slash command (e.g. `/statusline-config order '...'`).
-
-### Themes
-
-Catppuccin `mocha` (default), `macchiato`, `frappe`, `latte`. Add your own by dropping a `themes/<name>.sh` that sets the same color-role variables.
+For automation:
 
 ```sh
-~/.claude/statusline-theme.sh latte   # set a theme
-~/.claude/statusline-theme.sh         # list themes and show the current one
+sh install.sh install claude
+sh install.sh install codex
+sh install.sh install all
+sh install.sh uninstall claude
+sh install.sh uninstall codex
+sh install.sh uninstall all
 ```
 
-### Layout
+The old `sh install.sh codex` shorthand and `uninstall.sh` wrapper remain available.
 
-State lives in `~/.claude/.statusline-config` as a layout string where `;` separates lines and `,` separates segments. Default: `model,dir,branch;ctx;session,week`. Delete the file to reset.
+## Claude Code
+
+Open the interactive configurator from a terminal:
 
 ```sh
-~/.claude/statusline-config.sh                      # show current layout + on/off status
-~/.claude/statusline-config.sh disable branch       # hide a segment, wherever it is
-~/.claude/statusline-config.sh enable changes       # append to the last line
-~/.claude/statusline-config.sh order 'model,dir,branch,ctx,session,week'   # quote it: ';' is a shell separator
+~/.claude/statusline-config.sh menu
 ```
 
-`enable` appends to the last line; `disable` drops the line if it becomes empty. Segments can go on any line, in any order.
+The menu toggles `model`, `dir`, `branch`, `ctx`, `session`, `week`, and `changes`; it can also change the complete layout or Catppuccin theme. Non-interactive commands remain available:
 
-### Limit style
+```sh
+~/.claude/statusline-config.sh show
+~/.claude/statusline-config.sh enable changes
+~/.claude/statusline-config.sh disable branch
+~/.claude/statusline-config.sh order 'model,dir,branch;ctx;session,week'
+~/.claude/statusline-theme.sh latte
+```
 
-Controls how `session` and `week` render.
+The usage bars read `~/.claude/.statusline-bar`, format `<filled> <empty> [width] [half]`, defaulting to `● ○ 20` — dots because they exist in every terminal font (`█`/`░` render as blank space in fonts without block elements), 20 cells because that resolves 5% steps:
+
+```sh
+printf '█ ░ 10\n'    > ~/.claude/.statusline-bar   # block bar, 10 cells -> 10% steps
+printf '● ○ 10 ◐\n'  > ~/.claude/.statusline-bar   # 5% steps without widening the line
+```
+
+`session` and `week` also have a compact style that drops the bar and keeps only the reset time:
 
 ```sh
 ~/.claude/statusline-config.sh style compact   # "reset ↻ 3h 54m • ↻ 1d 21h"
-~/.claude/statusline-config.sh style full      # "session ████░░ 13% ↻ 3h 54m" (default)
+~/.claude/statusline-config.sh style full      # "session ●●○○○○○○○○○○○○○○○○○○ 13% ↻ 3h 54m" (default)
 ```
 
-## Segments
-
 | Segment   | Shows                                                        |
-| --------- | ----------------------------------------------------------- |
-| `model`   | Model display name                                          |
-| `dir`     | Current folder                                              |
-| `branch`  | Git branch                                                  |
-| `ctx`     | Context-window usage                                        |
-| `session` | 5h usage limit                                              |
-| `week`    | 7d usage limit                                              |
+| --------- | ------------------------------------------------------------ |
+| `model`   | Model display name                                           |
+| `dir`     | Current folder                                               |
+| `branch`  | Git branch                                                   |
+| `ctx`     | Context-window usage                                         |
+| `session` | 5h usage limit                                               |
+| `week`    | 7d usage limit                                               |
 | `changes` | Git working tree (`+2 ~3 -1`), hidden when the tree is clean |
+
+Inside Claude Code, use `/statusline-config` with `show`, `enable`, `disable`, or `order`. Claude also provides its own `/statusline` command, which generates or edits a status-line script from natural-language instructions.
+
+Claude's documented extension point executes a command, sends session JSON through stdin, and renders stdout. It does not expose a third-party native configuration panel, so this project's menu runs in the terminal rather than inside Claude's TUI. See [Anthropic's status-line documentation](https://code.claude.com/docs/en/statusline).
+
+## Codex CLI
+
+Codex renders the footer natively. This project only manages its ordered fields and preserves the previous `status_line` value for uninstall:
+
+```sh
+~/.codex/codex-statusline.sh show
+~/.codex/codex-statusline.sh preset minimal
+~/.codex/codex-statusline.sh preset balanced
+~/.codex/codex-statusline.sh preset full
+~/.codex/codex-statusline.sh enable weekly-limit
+~/.codex/codex-statusline.sh order 'model-with-reasoning,current-dir,git-branch,context-remaining'
+~/.codex/codex-statusline.sh reset
+```
+
+The `balanced` and `full` presets include both `five-hour-limit` and `weekly-limit`. Codex hides a limit field when the active account/session does not provide data for that time window. For example, if Codex reports only a weekly window, `five-hour-limit` stays blank and `weekly-limit` is the visible fallback.
+
+Codex also has the native `/statusline` menu. The ordered identifiers are stored in [`tui.status_line`](https://learn.chatgpt.com/docs/config-file/config-reference#configtoml).
 
 ## Dependencies
 
-`jq`, `curl`, `git` (optional, for branch display).
+- Remote setup: `curl`.
+- Claude Code: `jq`; `git` is optional for repository information.
+- Codex: POSIX shell tools and Codex CLI.
+
+## Test
+
+```sh
+sh test.sh
+```

@@ -9,7 +9,8 @@ C_GREEN="166;227;161"; C_YELLOW="249;226;175"; C_RED="243;139;168"
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd 2>/dev/null)
 THEMES_DIR="${SCRIPT_DIR:-$HOME/.claude}/themes"
-flavor=$(cat "$HOME/.claude/.statusline-theme" 2>/dev/null || echo mocha)
+CLAUDE_DIR="${CLAUDE_HOME:-$HOME/.claude}"
+flavor=$(cat "$CLAUDE_DIR/.statusline-theme" 2>/dev/null || echo mocha)
 theme_file="$THEMES_DIR/${flavor}.sh"
 [ -f "$theme_file" ] || theme_file="$THEMES_DIR/mocha.sh"
 [ -f "$theme_file" ] && . "$theme_file"
@@ -51,7 +52,7 @@ seven_d_reset=""
 if [ -f "$CACHE_FILE" ]; then
   { read -r five_h; read -r seven_d; read -r five_h_reset; read -r seven_d_reset; } < "$CACHE_FILE"
 else
-  bash ~/.claude/fetch-usage.sh > /dev/null 2>&1 &
+  bash "$CLAUDE_DIR/fetch-usage.sh" > /dev/null 2>&1 &
 fi
 
 # --- compute_delta: given a raw ISO timestamp, returns human-readable time until reset ---
