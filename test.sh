@@ -12,9 +12,28 @@ assert_eq() {
   fi
 }
 
-assert_eq "$(render_bar 0 10)" "░░░░░░░░░░" "render_bar 0%"
-assert_eq "$(render_bar 100 10)" "██████████" "render_bar 100%"
-assert_eq "$(render_bar 50 10)" "█████░░░░░" "render_bar 50%"
+# isolate from the real ~/.claude so the user's own .statusline-bar can't skew the asserts
+UNIT_HOME=$(mktemp -d "${TMPDIR:-/tmp}/statusline-unit.XXXXXX")
+export CLAUDE_HOME="$UNIT_HOME"
+
+assert_eq "$(render_bar 0 10)" "○○○○○○○○○○" "render_bar 0%"
+assert_eq "$(render_bar 100 10)" "●●●●●●●●●●" "render_bar 100%"
+assert_eq "$(render_bar 50 10)" "●●●●●○○○○○" "render_bar 50%"
+assert_eq "$(render_bar 9)" "●○○○○○○○○○○○○○○○○○○○" "render_bar defaults to 20 cells"
+
+printf '█ ░\n' > "$UNIT_HOME/.statusline-bar"
+assert_eq "$(render_bar 50 10)" "█████░░░░░" "render_bar honors .statusline-bar glyphs"
+assert_eq "$(render_bar 15 10)" "█░░░░░░░░░" "render_bar floors without a half glyph"
+
+printf '● ○ 10 ◐\n' > "$UNIT_HOME/.statusline-bar"
+assert_eq "$(render_bar 15)" "●◐○○○○○○○○" "render_bar half glyph resolves the odd half-cell"
+assert_eq "$(render_bar 20)" "●●○○○○○○○○" "render_bar half glyph unused on exact cells"
+assert_eq "$(render_bar 100)" "●●●●●●●●●●" "render_bar 100% leaves no half-cell"
+
+printf '● ○ 20\n' > "$UNIT_HOME/.statusline-bar"
+assert_eq "$(render_bar 15)" "●●●○○○○○○○○○○○○○○○○○" "render_bar honors configured width"
+assert_eq "$(render_bar 15 10)" "●○○○○○○○○○" "render_bar argument beats configured width"
+rm -f "$UNIT_HOME/.statusline-bar"
 
 segment_enabled model "model,dir,branch" || { echo "FAIL: model should be enabled" >&2; exit 1; }
 ! segment_enabled week "model,dir,branch" || { echo "FAIL: week should not be enabled" >&2; exit 1; }

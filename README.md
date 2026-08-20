@@ -59,6 +59,13 @@ The menu toggles `model`, `dir`, `branch`, `ctx`, `session`, `week`, and `change
 ~/.claude/statusline-theme.sh latte
 ```
 
+The usage bars read `~/.claude/.statusline-bar`, format `<filled> <empty> [width] [half]`, defaulting to `● ○ 20` — dots because they exist in every terminal font (`█`/`░` render as blank space in fonts without block elements), 20 cells because that resolves 5% steps:
+
+```sh
+printf '█ ░ 10\n'    > ~/.claude/.statusline-bar   # block bar, 10 cells -> 10% steps
+printf '● ○ 10 ◐\n'  > ~/.claude/.statusline-bar   # 5% steps without widening the line
+```
+
 Inside Claude Code, use `/statusline-config` with `show`, `enable`, `disable`, or `order`. Claude also provides its own `/statusline` command, which generates or edits a status-line script from natural-language instructions.
 
 Claude's documented extension point executes a command, sends session JSON through stdin, and renders stdout. It does not expose a third-party native configuration panel, so this project's menu runs in the terminal rather than inside Claude's TUI. See [Anthropic's status-line documentation](https://code.claude.com/docs/en/statusline).

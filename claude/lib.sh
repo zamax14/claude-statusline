@@ -11,19 +11,38 @@ ALL_SEGMENTS="model,dir,branch,ctx,session,week,changes"
 DEFAULT_LAYOUT="model,dir,branch;ctx;session,week"
 ESC=$(printf '\033')
 
-# render_bar <percent> [width=10] -> "████░░░░░░"
+# render_bar <percent> [width] -> "●●●○○○○○○○○○○○○○○○○○"
+# ~/.claude/.statusline-bar overrides the look: "<filled> <empty> [width] [half]".
+# ponytail: dots and 20 cells are the default because plenty of terminal fonts
+# ship no block elements (U+2588/U+2591, rendered as blank space) and a 10-cell
+# bar only resolves 10% steps; the knobs stay for block glyphs, other widths,
+# or a half-filled glyph.
 render_bar() {
   local pct=${1:-0}
-  local width=${2:-10}
-  local filled=$(( pct * width / 100 ))
-  [ "$filled" -gt "$width" ] && filled=$width
-  [ "$filled" -lt 0 ] && filled=0
-  local empty=$(( width - filled ))
+  local width=$2
+  local cfg=$(cat "${CLAUDE_HOME:-$HOME/.claude}/.statusline-bar" 2>/dev/null)
+  # positional params are safe to clobber here: both args are already captured
+  set -f
+  set -- $cfg
+  set +f
+  local fill=${1:-●}
+  local void=${2:-○}
+  local half=${4:-}
+  width=${width:-${3:-20}}
+  # count in half-cells so a half glyph can resolve the odd one
+  local halves=$(( pct * width * 2 / 100 ))
+  [ "$halves" -lt 0 ] && halves=0
+  [ "$halves" -gt $(( width * 2 )) ] && halves=$(( width * 2 ))
+  local filled=$(( halves / 2 ))
+  local mid=$(( halves % 2 ))
+  [ -z "$half" ] && mid=0
+  local empty=$(( width - filled - mid ))
   local bar=""
   local i=0
-  while [ "$i" -lt "$filled" ]; do bar="${bar}█"; i=$((i + 1)); done
+  while [ "$i" -lt "$filled" ]; do bar="${bar}${fill}"; i=$((i + 1)); done
+  [ "$mid" -eq 1 ] && bar="${bar}${half}"
   i=0
-  while [ "$i" -lt "$empty" ]; do bar="${bar}░"; i=$((i + 1)); done
+  while [ "$i" -lt "$empty" ]; do bar="${bar}${void}"; i=$((i + 1)); done
   printf '%s' "$bar"
 }
 
